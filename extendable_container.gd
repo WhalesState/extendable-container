@@ -55,12 +55,18 @@ extends Container
 		collapsed_title_style = value
 		queue_redraw()
 
+@export var focus_style := _create_flat_stylebox(Color(0.2, 0.2, 0.2), [0, 0, 0, 0], [8, 8, 8, 8], Color.WHITE, [2, 2, 2, 2], false):
+	set(value):
+		focus_style = value
+		queue_redraw()
+
 var title_font := get_theme_default_font()
 var _title_height := 0
 var is_hovered := false
 
 
 func _init():
+	focus_mode = FOCUS_ALL
 	var cur_theme = ThemeDB.get_project_theme()
 	if cur_theme:
 		if not cur_theme.get_type_list().has("ExtendableContainer"):
@@ -115,18 +121,25 @@ func _init():
 
 
 func _gui_input(ev: InputEvent):
+	if ev.is_action_pressed("ui_accept"):
+		expanded = not expanded
+		get_viewport().set_input_as_handled()
+		return
 	if not (ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT and ev.pressed):
 		return
 	if ev.position.y <= _title_height:
 		expanded = not expanded
+		get_viewport().set_input_as_handled()
 
 
 func _create_flat_stylebox(bg_color := Color(0.6, 0.6, 0.6),
 		content_margin := PackedInt32Array([-1, -1, -1, -1]),
 		corner_radius := PackedInt32Array([0, 0, 0, 0]),
 		border_color := Color(0.8, 0.8, 0.8),
-		border_width := PackedInt32Array([0, 0, 0, 0])) -> StyleBoxFlat:
+		border_width := PackedInt32Array([0, 0, 0, 0]),
+		draw_center := true) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
+	style.draw_center = draw_center
 	style.bg_color = bg_color
 	style.border_color = border_color
 	var borders := ["left", "top", "right", "bottom"]
@@ -145,7 +158,7 @@ func _notification(what: int):
 		return
 	for child in get_children():
 		if not child is Control:
-			return
+			continue
 		child.position = panel_style.get_offset()
 		child.position.y += _title_height
 		match child.size_flags_horizontal:
@@ -216,3 +229,5 @@ func _draw():
 	if expanded:
 		draw_style_box(panel_style, Rect2(0, _title_height, size.x, size.y - _title_height))
 	custom_minimum_size.y = _title_height
+	if has_focus():
+		draw_style_box(focus_style, Rect2(Vector2.ZERO, size))
